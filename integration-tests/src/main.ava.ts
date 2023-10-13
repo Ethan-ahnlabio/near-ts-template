@@ -1,5 +1,5 @@
-import { Worker, NearAccount } from 'near-workspaces';
-import anyTest, { TestFn } from 'ava';
+import { Worker, NearAccount } from "near-workspaces";
+import anyTest, { TestFn } from "ava";
 
 const test = anyTest as TestFn<{
   worker: Worker;
@@ -12,11 +12,9 @@ test.beforeEach(async (t) => {
 
   // Deploy contract
   const root = worker.rootAccount;
-  const contract = await root.createSubAccount('test-account');
+  const contract = await root.createSubAccount("test-account");
   // Get wasm file path from package.json test script in folder above
-  await contract.deploy(
-    process.argv[2],
-  );
+  await contract.deploy(process.argv[2]);
 
   // Save state for test runs, it is unique for each test
   t.context.worker = worker;
@@ -26,8 +24,37 @@ test.beforeEach(async (t) => {
 test.afterEach.always(async (t) => {
   // Stop Sandbox server
   await t.context.worker.tearDown().catch((error) => {
-    console.log('Failed to stop the Sandbox:', error);
+    console.log("Failed to stop the Sandbox:", error);
   });
 });
 
 // TODO: Add functiont test
+test("Retruns the default number", async (t) => {
+  const { contract } = t.context.accounts;
+  const num: number = await contract.view("get_number", {});
+  t.is(num, 0);
+});
+
+test("Increase number", async (t) => {
+  const { root, contract } = t.context.accounts;
+  await root.call(contract, "increase_number", {});
+  const num: number = await contract.view("get_number", {});
+  t.is(num, 1);
+});
+
+test("Decrease number", async (t) => {
+  const { root, contract } = t.context.accounts;
+  await root.call(contract, "increase_number", {});
+  await root.call(contract, "decrease_number", {});
+
+  const num: number = await contract.view("get_number", {});
+  t.is(num, 0);
+});
+
+test("Payable function with increase 10 unit", async (t) => {
+  const { root, contract } = t.context.accounts;
+  await root.call(contract, "payable_fun", {}, { attachedDeposit: "100" });
+  const num: number = await contract.view("get_number", {});
+
+  t.is(num, 10);
+});
